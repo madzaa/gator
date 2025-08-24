@@ -14,12 +14,10 @@ import (
 )
 
 const createFeedFollows = `-- name: CreateFeedFollows :one
-WITH inserted_feed_follow AS (INSERT INTO feed_follows (id, created_at, updated_at, user_id, feed_id)
-    VALUES ($1,
-            $2,
-            $3,
-            $4,
-            $5)
+WITH inserted_feed_follow AS (
+INSERT
+INTO feed_follows (id, created_at, updated_at, user_id, feed_id)
+VALUES ($1, $2, $3, $4, $5)
     RETURNING id, created_at, updated_at, user_id, feed_id)
 SELECT inserted_feed_follow.id, inserted_feed_follow.created_at, inserted_feed_follow.updated_at, inserted_feed_follow.user_id, inserted_feed_follow.feed_id,
        f.name as feed_name,
@@ -66,6 +64,22 @@ func (q *Queries) CreateFeedFollows(ctx context.Context, arg CreateFeedFollowsPa
 		&i.UserName,
 	)
 	return i, err
+}
+
+const deleteFeedFollowsForUser = `-- name: DeleteFeedFollowsForUser :exec
+DELETE
+FROM feed_follows
+WHERE feed_id = $1 AND user_id = $2
+`
+
+type DeleteFeedFollowsForUserParams struct {
+	FeedID uuid.UUID
+	UserID uuid.UUID
+}
+
+func (q *Queries) DeleteFeedFollowsForUser(ctx context.Context, arg DeleteFeedFollowsForUserParams) error {
+	_, err := q.db.ExecContext(ctx, deleteFeedFollowsForUser, arg.FeedID, arg.UserID)
+	return err
 }
 
 const getFeedFollowsForUser = `-- name: GetFeedFollowsForUser :many

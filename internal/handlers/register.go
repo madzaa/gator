@@ -15,4 +15,5 @@ func RegisterCommands(cmds *commands.Commands) {
 	cmds.Register("feeds", HandleListFeeds)
 	cmds.Register("follow", middleware.LoggedIn(HandleFeedFollow))
 	cmds.Register("following", middleware.LoggedIn(HandleFeedFollowing))
+	cmds.Register("unfollow", middleware.LoggedIn(HandleUnfollow))
 }

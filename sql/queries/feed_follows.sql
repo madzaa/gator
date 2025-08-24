@@ -1,10 +1,8 @@
 -- name: CreateFeedFollows :one
-WITH inserted_feed_follow AS (INSERT INTO feed_follows (id, created_at, updated_at, user_id, feed_id)
-    VALUES ($1,
-            $2,
-            $3,
-            $4,
-            $5)
+WITH inserted_feed_follow AS (
+INSERT
+INTO feed_follows (id, created_at, updated_at, user_id, feed_id)
+VALUES ($1, $2, $3, $4, $5)
     RETURNING *)
 SELECT inserted_feed_follow.*,
        f.name as feed_name,
@@ -20,3 +18,9 @@ FROM feed_follows
          LEFT JOIN users ON users.id = feed_follows.user_id
          LEFT JOIN feeds ON feeds.id = feed_follows.feed_id
 WHERE feed_follows.user_id = $1;
+
+
+-- name: DeleteFeedFollowsForUser :exec
+DELETE
+FROM feed_follows
+WHERE feed_id = $1 AND user_id = $2;

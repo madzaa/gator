@@ -185,6 +185,23 @@ func HandleFeedFollowing(s *state.State, cmd commands.Command, user database.Use
 	return nil
 }
 
+func HandleUnfollow(s *state.State, cmd commands.Command, user database.User) error {
+	ctx := context.Background()
+	args := cmd.Arguments
+	feed, err := s.Db.GetFeed(ctx, args[0])
+	if err != nil {
+		return err
+	}
+	err = s.Db.DeleteFeedFollowsForUser(ctx, database.DeleteFeedFollowsForUserParams{
+		FeedID: feed.ID,
+		UserID: user.ID,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func checkUserExists(s *state.State, username string) (bool, error) {
 	_, err := s.Db.GetUser(context.Background(), username)
 	if err == nil {
