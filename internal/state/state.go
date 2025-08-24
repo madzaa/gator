@@ -1,7 +1,7 @@
 package state
 
 import (
-	config "gator/internal/config"
+	"gator/internal/config"
 	"gator/internal/database"
 )
 

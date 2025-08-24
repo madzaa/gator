@@ -95,7 +95,7 @@ func HandleListUsers(s *state.State, cmd commands.Command) error {
 	return nil
 }
 
-func HandleAggregation(s *state.State, cmd commands.Command) error {
+func HandleAggregation(*state.State, commands.Command) error {
 	feed, err := commands.FetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
 	if err != nil {
 		return err

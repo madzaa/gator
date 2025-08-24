@@ -21,7 +21,12 @@ func FetchFeed(ctx context.Context, feedUrl string) (*config.RSSFeed, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(resp.Body)
 
 	var rss config.RSSFeed
 	body, err := io.ReadAll(resp.Body)
