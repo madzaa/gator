@@ -8,7 +8,7 @@ VALUES ($1,
         $6)
 RETURNING *;
 
--- name: GetFeed :one
+-- name: GetFeedByUrl :one
 SELECT *
 FROM feeds
 WHERE url = $1;
@@ -18,5 +18,6 @@ DELETE
 FROM feeds;
 
 -- name: GetFeeds :many
-SELECT f.name, u.name from feeds f
-left join users u on f.user_id = u.id;
+SELECT f.name, u.name
+from feeds f
+         left join users u on f.user_id = u.id;

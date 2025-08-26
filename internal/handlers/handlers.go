@@ -95,13 +95,29 @@ func HandleListUsers(s *state.State, cmd commands.Command) error {
 	return nil
 }
 
-func HandleAggregation(*state.State, commands.Command) error {
-	feed, err := commands.FetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+func HandleAggregation(s *state.State, cmd commands.Command) error {
+	ctx := context.Background()
+	args := cmd.Arguments
+	duration := args[0]
+	parsedDuration, err := time.ParseDuration(duration)
 	if err != nil {
 		return err
 	}
-	fmt.Println(feed)
-	return nil
+
+	ticker := time.NewTicker(parsedDuration)
+	for ; ; <-ticker.C {
+		feeds, err := scrapeFeed(ctx, s)
+		if err != nil {
+			return err
+		}
+		feed, err := commands.FetchFeed(ctx, feeds.Url)
+		if err != nil {
+			return err
+		}
+		for _, item := range feed.Channel.Item {
+			fmt.Println(item.Title)
+		}
+	}
 }
 
 func HandleAddFeed(s *state.State, cmd commands.Command, user database.User) error {
@@ -155,7 +171,7 @@ func HandleListFeeds(s *state.State, cmd commands.Command) error {
 func HandleFeedFollow(s *state.State, cmd commands.Command, user database.User) error {
 	ctx := context.Background()
 	args := cmd.Arguments
-	feed, err := s.Db.GetFeed(ctx, args[0])
+	feed, err := s.Db.GetFeedByUrl(ctx, args[0])
 	if err != nil {
 		return err
 	}
@@ -188,7 +204,7 @@ func HandleFeedFollowing(s *state.State, cmd commands.Command, user database.Use
 func HandleUnfollow(s *state.State, cmd commands.Command, user database.User) error {
 	ctx := context.Background()
 	args := cmd.Arguments
-	feed, err := s.Db.GetFeed(ctx, args[0])
+	feed, err := s.Db.GetFeedByUrl(ctx, args[0])
 	if err != nil {
 		return err
 	}
@@ -200,6 +216,27 @@ func HandleUnfollow(s *state.State, cmd commands.Command, user database.User) er
 		return err
 	}
 	return nil
+}
+
+func scrapeFeed(ctx context.Context, s *state.State) (database.Feed, error) {
+	next, err := s.Db.GetNextFeedToFetch(ctx)
+	if err != nil {
+		return database.Feed{}, err
+	}
+
+	err = s.Db.MarkFeedFetched(ctx, database.MarkFeedFetchedParams{
+		LastFetchedAt: sql.NullTime{Time: time.Now()},
+		ID:            next.ID.UUID,
+	})
+	if err != nil {
+		return database.Feed{}, err
+	}
+
+	feed, err := s.Db.GetFeedByUrl(ctx, next.Url.String)
+	if err != nil {
+		return database.Feed{}, err
+	}
+	return feed, nil
 }
 
 func checkUserExists(s *state.State, username string) (bool, error) {

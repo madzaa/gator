@@ -64,14 +64,14 @@ func (q *Queries) DeleteFeeds(ctx context.Context) error {
 	return err
 }
 
-const getFeed = `-- name: GetFeed :one
+const getFeedByUrl = `-- name: GetFeedByUrl :one
 SELECT id, created_at, updated_at, name, url, user_id
 FROM feeds
 WHERE url = $1
 `
 
-func (q *Queries) GetFeed(ctx context.Context, url string) (Feed, error) {
-	row := q.db.QueryRowContext(ctx, getFeed, url)
+func (q *Queries) GetFeedByUrl(ctx context.Context, url string) (Feed, error) {
+	row := q.db.QueryRowContext(ctx, getFeedByUrl, url)
 	var i Feed
 	err := row.Scan(
 		&i.ID,
@@ -85,8 +85,9 @@ func (q *Queries) GetFeed(ctx context.Context, url string) (Feed, error) {
 }
 
 const getFeeds = `-- name: GetFeeds :many
-SELECT f.name, u.name from feeds f
-left join users u on f.user_id = u.id
+SELECT f.name, u.name
+from feeds f
+         left join users u on f.user_id = u.id
 `
 
 type GetFeedsRow struct {
