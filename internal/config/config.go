@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -17,16 +18,19 @@ const configFileName = ".gatorconfig.json"
 func Read() (Config, error) {
 	configFilePath, err := getConfigFile()
 	if err != nil {
+		log.Printf("Config.Read error: failed to get config file path: %v", err)
 		return Config{}, err
 	}
 	data, err := os.ReadFile(configFilePath)
 	if err != nil {
+		log.Printf("Config.Read error: failed to read config file: %v", err)
 		return Config{}, err
 	}
 
 	config := Config{}
 	err = json.Unmarshal(data, &config)
 	if err != nil {
+		log.Printf("Config.Read error: failed to unmarshal config: %v", err)
 		return Config{}, err
 	}
 	return config, nil
@@ -34,7 +38,11 @@ func Read() (Config, error) {
 
 func (c *Config) SetUser(username string) error {
 	c.CurrentUserName = username
-	return write(c)
+	err := write(c)
+	if err != nil {
+		log.Printf("Config.SetUser error: failed to write config: %v", err)
+	}
+	return err
 }
 
 func (c *Config) String() string {
@@ -44,13 +52,20 @@ func (c *Config) String() string {
 func write(cfg *Config) error {
 	jsonData, err := json.Marshal(cfg)
 	if err != nil {
+		log.Printf("Config.write error: failed to marshal config: %v", err)
 		return err
 	}
 	configFilePath, err := getConfigFile()
 	if err != nil {
+		log.Printf("Config.write error: failed to get config file path: %v", err)
 		return err
 	}
-	return os.WriteFile(configFilePath, jsonData, 0644)
+	err = os.WriteFile(configFilePath, jsonData, 0644)
+	if err != nil {
+		log.Printf("Config.write error: failed to write config file: %v", err)
+		return err
+	}
+	return nil
 }
 
 func getConfigFile() (string, error) {
