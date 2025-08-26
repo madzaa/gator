@@ -245,13 +245,13 @@ func scrapeFeed(ctx context.Context, s *state.State) (database.Feed, error) {
 
 	err = s.Db.MarkFeedFetched(ctx, database.MarkFeedFetchedParams{
 		LastFetchedAt: sql.NullTime{Time: time.Now()},
-		ID:            next.ID.UUID,
+		ID:            next.ID,
 	})
 	if err != nil {
 		return database.Feed{}, err
 	}
 
-	feed, err := s.Db.GetFeedByUrl(ctx, next.Url.String)
+	feed, err := s.Db.GetFeedByUrl(ctx, next.Url)
 	if err != nil {
 		return database.Feed{}, err
 	}

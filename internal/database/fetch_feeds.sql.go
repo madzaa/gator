@@ -13,23 +13,14 @@ import (
 )
 
 const getNextFeedToFetch = `-- name: GetNextFeedToFetch :one
-SELECT f.id, f.created_at, f.updated_at, f.name, f.url, f.user_id
-FROM feed_follows left join public.feeds f on feed_follows.feed_id = f.id
+SELECT id, created_at, updated_at, name, url, user_id, last_fetched_at
+FROM feeds
 ORDER BY last_fetched_at DESC NULLS FIRST
 `
 
-type GetNextFeedToFetchRow struct {
-	ID        uuid.NullUUID
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
-	Name      sql.NullString
-	Url       sql.NullString
-	UserID    uuid.NullUUID
-}
-
-func (q *Queries) GetNextFeedToFetch(ctx context.Context) (GetNextFeedToFetchRow, error) {
+func (q *Queries) GetNextFeedToFetch(ctx context.Context) (Feed, error) {
 	row := q.db.QueryRowContext(ctx, getNextFeedToFetch)
-	var i GetNextFeedToFetchRow
+	var i Feed
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
@@ -37,15 +28,16 @@ func (q *Queries) GetNextFeedToFetch(ctx context.Context) (GetNextFeedToFetchRow
 		&i.Name,
 		&i.Url,
 		&i.UserID,
+		&i.LastFetchedAt,
 	)
 	return i, err
 }
 
 const markFeedFetched = `-- name: MarkFeedFetched :exec
-UPDATE feed_follows
+UPDATE feeds
 SET last_fetched_at = $1 and updated_at = $1
 WHERE id = $2
-RETURNING id, created_at, updated_at, user_id, feed_id, last_fetched_at
+RETURNING id, created_at, updated_at, name, url, user_id, last_fetched_at
 `
 
 type MarkFeedFetchedParams struct {

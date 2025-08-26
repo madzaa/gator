@@ -18,8 +18,8 @@ WITH inserted_feed_follow AS (
 INSERT
 INTO feed_follows (id, created_at, updated_at, user_id, feed_id)
 VALUES ($1, $2, $3, $4, $5)
-    RETURNING id, created_at, updated_at, user_id, feed_id, last_fetched_at)
-SELECT inserted_feed_follow.id, inserted_feed_follow.created_at, inserted_feed_follow.updated_at, inserted_feed_follow.user_id, inserted_feed_follow.feed_id, inserted_feed_follow.last_fetched_at,
+    RETURNING id, created_at, updated_at, user_id, feed_id)
+SELECT inserted_feed_follow.id, inserted_feed_follow.created_at, inserted_feed_follow.updated_at, inserted_feed_follow.user_id, inserted_feed_follow.feed_id,
        f.name as feed_name,
        u.name as user_name
 FROM inserted_feed_follow
@@ -36,14 +36,13 @@ type CreateFeedFollowsParams struct {
 }
 
 type CreateFeedFollowsRow struct {
-	ID            uuid.UUID
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	UserID        uuid.UUID
-	FeedID        uuid.UUID
-	LastFetchedAt sql.NullTime
-	FeedName      string
-	UserName      string
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	UserID    uuid.UUID
+	FeedID    uuid.UUID
+	FeedName  string
+	UserName  string
 }
 
 func (q *Queries) CreateFeedFollows(ctx context.Context, arg CreateFeedFollowsParams) (CreateFeedFollowsRow, error) {
@@ -61,7 +60,6 @@ func (q *Queries) CreateFeedFollows(ctx context.Context, arg CreateFeedFollowsPa
 		&i.UpdatedAt,
 		&i.UserID,
 		&i.FeedID,
-		&i.LastFetchedAt,
 		&i.FeedName,
 		&i.UserName,
 	)
@@ -72,7 +70,7 @@ const deleteFeedFollowsForUser = `-- name: DeleteFeedFollowsForUser :exec
 DELETE
 FROM feed_follows
 WHERE feed_id = $1 AND user_id = $2
-RETURNING id, created_at, updated_at, user_id, feed_id, last_fetched_at
+RETURNING id, created_at, updated_at, user_id, feed_id
 `
 
 type DeleteFeedFollowsForUserParams struct {
