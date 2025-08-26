@@ -117,7 +117,7 @@ func HandleAggregation(s *state.State, cmd commands.Command) error {
 	duration := args[0]
 	parsedDuration, err := time.ParseDuration(duration)
 	if err != nil {
-		log.Printf("HandleAggregation error: %v\n", err)
+		log.Printf("HandleAggregation error: unable to parse duration %v\n", err)
 		return err
 	}
 
@@ -125,12 +125,12 @@ func HandleAggregation(s *state.State, cmd commands.Command) error {
 	for ; ; <-ticker.C {
 		feeds, err := scrapeFeed(ctx, s)
 		if err != nil {
-			log.Printf("HandleAggregation error: %v\n", err)
+			log.Printf("HandleAggregation error: unable to scrape feeds %v\n", err)
 			return err
 		}
 		feed, err := commands.FetchFeed(ctx, feeds.Url)
 		if err != nil {
-			log.Printf("HandleAggregation error: %v\n", err)
+			log.Printf("HandleAggregation error: unable to fetch feeds%v\n", err)
 			return err
 		}
 		for _, item := range feed.Channel.Item {
@@ -244,8 +244,11 @@ func scrapeFeed(ctx context.Context, s *state.State) (database.Feed, error) {
 	}
 
 	err = s.Db.MarkFeedFetched(ctx, database.MarkFeedFetchedParams{
-		LastFetchedAt: sql.NullTime{Time: time.Now()},
-		ID:            next.ID,
+		LastFetchedAt: sql.NullTime{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		},
+		ID: next.ID,
 	})
 	if err != nil {
 		return database.Feed{}, err

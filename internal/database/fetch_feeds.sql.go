@@ -35,9 +35,8 @@ func (q *Queries) GetNextFeedToFetch(ctx context.Context) (Feed, error) {
 
 const markFeedFetched = `-- name: MarkFeedFetched :exec
 UPDATE feeds
-SET last_fetched_at = $1 and updated_at = $1
+SET last_fetched_at = $1,  updated_at = $1
 WHERE id = $2
-RETURNING id, created_at, updated_at, name, url, user_id, last_fetched_at
 `
 
 type MarkFeedFetchedParams struct {
