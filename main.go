@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"gator/internal/commands"
 	"gator/internal/config"
@@ -25,6 +26,7 @@ func main() {
 	cfgState.Db = database.New(db)
 
 	cmds := commands.New()
+	ctx := context.Background()
 	handlers.RegisterCommands(cmds)
 
 	args := os.Args
@@ -32,7 +34,7 @@ func main() {
 		Name:      args[1],
 		Arguments: args[2:],
 	}
-	err = cmds.Run(cfgState, cmd)
+	err = cmds.Run(ctx, cfgState, cmd)
 	if err != nil {
 		log.Fatal(err)
 	}

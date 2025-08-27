@@ -2,19 +2,19 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"gator/internal/commands"
 	"gator/internal/database"
 	"gator/internal/state"
+	"gator/internal/utils"
 	"log"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-func HandleLogin(s *state.State, cmd commands.Command) error {
+func HandleLogin(ctx context.Context, s *state.State, cmd commands.Command) error {
 	args := cmd.Arguments
 	if len(args) == 0 || len(args) > 1 {
 		err := errors.New("invalid username")
@@ -23,7 +23,10 @@ func HandleLogin(s *state.State, cmd commands.Command) error {
 	}
 	username := args[0]
 
-	exists, err := checkUserExists(s, username)
+	exists, err := utils.CheckExists(ctx, func(ctx context.Context) error {
+		_, err := s.Db.GetUser(ctx, username)
+		return err
+	})
 	if err != nil {
 		log.Printf("HandleLogin error: %v\n", err)
 		return err
@@ -43,7 +46,7 @@ func HandleLogin(s *state.State, cmd commands.Command) error {
 	return nil
 }
 
-func HandleRegistration(s *state.State, cmd commands.Command) error {
+func HandleRegistration(ctx context.Context, s *state.State, cmd commands.Command) error {
 	args := cmd.Arguments
 	if len(args) == 0 || len(args) > 1 {
 		err := errors.New("invalid username")
@@ -52,7 +55,10 @@ func HandleRegistration(s *state.State, cmd commands.Command) error {
 	}
 	username := args[0]
 
-	exists, err := checkUserExists(s, username)
+	exists, err := utils.CheckExists(ctx, func(ctx context.Context) error {
+		_, err := s.Db.GetUser(ctx, username)
+		return err
+	})
 	if err != nil {
 		log.Printf("HandleRegistration error: %v\n", err)
 		return err
@@ -63,7 +69,7 @@ func HandleRegistration(s *state.State, cmd commands.Command) error {
 		return err
 	}
 
-	_, err = s.Db.CreateUser(context.Background(), database.CreateUserParams{
+	_, err = s.Db.CreateUser(ctx, database.CreateUserParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -85,8 +91,8 @@ func HandleRegistration(s *state.State, cmd commands.Command) error {
 	return nil
 }
 
-func HandleDeletion(s *state.State, cmd commands.Command) error {
-	err := s.Db.DeleteUsers(context.Background())
+func HandleDeletion(ctx context.Context, s *state.State, cmd commands.Command) error {
+	err := s.Db.DeleteUsers(ctx)
 	if err != nil {
 		log.Printf("HandleDeletion error: unable to delete users: %v\n", err)
 		return fmt.Errorf("unable to delete users: %v\n", err)
@@ -94,8 +100,8 @@ func HandleDeletion(s *state.State, cmd commands.Command) error {
 	return nil
 }
 
-func HandleListUsers(s *state.State, cmd commands.Command) error {
-	users, err := s.Db.GetUsers(context.Background())
+func HandleListUsers(ctx context.Context, s *state.State, cmd commands.Command) error {
+	users, err := s.Db.GetUsers(ctx)
 	if err != nil {
 		log.Printf("HandleListUsers error: unable to list users: %v\n", err)
 		return fmt.Errorf("unable to list users: %v\n", err)
@@ -111,8 +117,7 @@ func HandleListUsers(s *state.State, cmd commands.Command) error {
 	return nil
 }
 
-func HandleAggregation(s *state.State, cmd commands.Command) error {
-	ctx := context.Background()
+func HandleAggregation(ctx context.Context, s *state.State, cmd commands.Command) error {
 	args := cmd.Arguments
 	duration := args[0]
 	parsedDuration, err := time.ParseDuration(duration)
@@ -123,24 +128,25 @@ func HandleAggregation(s *state.State, cmd commands.Command) error {
 
 	ticker := time.NewTicker(parsedDuration)
 	for ; ; <-ticker.C {
-		feeds, err := scrapeFeed(ctx, s)
+		feeds, err := utils.ScrapeFeed(ctx, s)
 		if err != nil {
 			log.Printf("HandleAggregation error: unable to scrape feeds %v\n", err)
 			return err
 		}
-		feed, err := commands.FetchFeed(ctx, feeds.Url)
+		fetchedFeed, err := commands.FetchFeed(ctx, feeds.Url)
 		if err != nil {
-			log.Printf("HandleAggregation error: unable to fetch feeds%v\n", err)
+			log.Printf("HandleAggregation error: unable to fetch feeds %v\n", err)
 			return err
 		}
-		for _, item := range feed.Channel.Item {
-			fmt.Println(item.Title)
+		err = utils.CreatePost(s, fetchedFeed, ctx, feeds)
+		if err != nil {
+			log.Printf("HandleAggregation error: unable to create post %v\n", err)
+			return err
 		}
 	}
 }
 
-func HandleAddFeed(s *state.State, cmd commands.Command, user database.User) error {
-	ctx := context.Background()
+func HandleAddFeed(ctx context.Context, s *state.State, cmd commands.Command, user database.User) error {
 	args := cmd.Arguments
 	feed, err := s.Db.CreateFeed(ctx, database.CreateFeedParams{
 		ID:        uuid.New(),
@@ -175,8 +181,8 @@ func HandleAddFeed(s *state.State, cmd commands.Command, user database.User) err
 
 }
 
-func HandleListFeeds(s *state.State, cmd commands.Command) error {
-	feeds, err := s.Db.GetFeeds(context.Background())
+func HandleListFeeds(ctx context.Context, s *state.State, cmd commands.Command) error {
+	feeds, err := s.Db.GetFeeds(ctx)
 	if err != nil {
 		return err
 	}
@@ -187,14 +193,13 @@ func HandleListFeeds(s *state.State, cmd commands.Command) error {
 	return nil
 }
 
-func HandleFeedFollow(s *state.State, cmd commands.Command, user database.User) error {
-	ctx := context.Background()
+func HandleFeedFollow(ctx context.Context, s *state.State, cmd commands.Command, user database.User) error {
 	args := cmd.Arguments
 	feed, err := s.Db.GetFeedByUrl(ctx, args[0])
 	if err != nil {
 		return err
 	}
-	_, err = s.Db.CreateFeedFollows(context.Background(), database.CreateFeedFollowsParams{
+	_, err = s.Db.CreateFeedFollows(ctx, database.CreateFeedFollowsParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -208,8 +213,7 @@ func HandleFeedFollow(s *state.State, cmd commands.Command, user database.User) 
 	return nil
 }
 
-func HandleFeedFollowing(s *state.State, cmd commands.Command, user database.User) error {
-	ctx := context.Background()
+func HandleFeedFollowing(ctx context.Context, s *state.State, cmd commands.Command, user database.User) error {
 	feeds, err := s.Db.GetFeedFollowsForUser(ctx, user.ID)
 	if err != nil {
 		return err
@@ -220,8 +224,7 @@ func HandleFeedFollowing(s *state.State, cmd commands.Command, user database.Use
 	return nil
 }
 
-func HandleUnfollow(s *state.State, cmd commands.Command, user database.User) error {
-	ctx := context.Background()
+func HandleUnfollow(ctx context.Context, s *state.State, cmd commands.Command, user database.User) error {
 	args := cmd.Arguments
 	feed, err := s.Db.GetFeedByUrl(ctx, args[0])
 	if err != nil {
@@ -235,39 +238,4 @@ func HandleUnfollow(s *state.State, cmd commands.Command, user database.User) er
 		return err
 	}
 	return nil
-}
-
-func scrapeFeed(ctx context.Context, s *state.State) (database.Feed, error) {
-	next, err := s.Db.GetNextFeedToFetch(ctx)
-	if err != nil {
-		return database.Feed{}, err
-	}
-
-	err = s.Db.MarkFeedFetched(ctx, database.MarkFeedFetchedParams{
-		LastFetchedAt: sql.NullTime{
-			Time:  time.Now().UTC(),
-			Valid: true,
-		},
-		ID: next.ID,
-	})
-	if err != nil {
-		return database.Feed{}, err
-	}
-
-	feed, err := s.Db.GetFeedByUrl(ctx, next.Url)
-	if err != nil {
-		return database.Feed{}, err
-	}
-	return feed, nil
-}
-
-func checkUserExists(s *state.State, username string) (bool, error) {
-	_, err := s.Db.GetUser(context.Background(), username)
-	if err == nil {
-		return true, nil
-	}
-	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
-	}
-	return false, fmt.Errorf("query error: %w", err)
 }
