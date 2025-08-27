@@ -1,13 +1,16 @@
-package commands
+package service
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"gator/internal/config"
+	"gator/internal/database"
 	"html"
 	"io"
 	"log"
 	"net/http"
+	"time"
 )
 
 func FetchFeed(ctx context.Context, feedUrl string) (*config.RSSFeed, error) {
@@ -46,6 +49,30 @@ func FetchFeed(ctx context.Context, feedUrl string) (*config.RSSFeed, error) {
 
 	sanitiseFields(&rss)
 	return &rss, err
+}
+
+func ScrapeFeed(ctx context.Context, s *config.State) (database.Feed, error) {
+	next, err := s.Db.GetNextFeedToFetch(ctx)
+	if err != nil {
+		return database.Feed{}, err
+	}
+
+	err = s.Db.MarkFeedFetched(ctx, database.MarkFeedFetchedParams{
+		LastFetchedAt: sql.NullTime{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		},
+		ID: next.ID,
+	})
+	if err != nil {
+		return database.Feed{}, err
+	}
+
+	feed, err := s.Db.GetFeedByUrl(ctx, next.Url)
+	if err != nil {
+		return database.Feed{}, err
+	}
+	return feed, nil
 }
 
 func sanitiseFields(rss *config.RSSFeed) {

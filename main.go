@@ -7,7 +7,6 @@ import (
 	"gator/internal/config"
 	"gator/internal/database"
 	"gator/internal/handlers"
-	"gator/internal/state"
 	"log"
 	"os"
 
@@ -20,7 +19,7 @@ func main() {
 		log.Fatalf("unable to read config: %v", err)
 	}
 
-	cfgState := &state.State{Config: &cfg}
+	cfgState := &config.State{Config: &cfg}
 	dbUrl := cfgState.Config.DbUrl
 	db, err := sql.Open("postgres", dbUrl)
 	cfgState.Db = database.New(db)

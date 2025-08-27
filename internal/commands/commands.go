@@ -3,7 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
-	"gator/internal/state"
+	"gator/internal/config"
 	"log"
 )
 
@@ -13,14 +13,14 @@ type Command struct {
 }
 
 type Commands struct {
-	handlers map[string]func(context.Context, *state.State, Command) error
+	handlers map[string]func(context.Context, *config.State, Command) error
 }
 
 func New() *Commands {
-	return &Commands{handlers: make(map[string]func(context.Context, *state.State, Command) error)}
+	return &Commands{handlers: make(map[string]func(context.Context, *config.State, Command) error)}
 }
 
-func (c *Commands) Run(ctx context.Context, s *state.State, cmd Command) error {
+func (c *Commands) Run(ctx context.Context, s *config.State, cmd Command) error {
 	if c.handlers[cmd.Name] == nil {
 		err := fmt.Errorf("command %v does not exist", cmd.Name)
 		log.Printf("Commands.Run error: %v\n", err)
@@ -34,6 +34,6 @@ func (c *Commands) Run(ctx context.Context, s *state.State, cmd Command) error {
 	return err
 }
 
-func (c *Commands) Register(name string, f func(context.Context, *state.State, Command) error) {
+func (c *Commands) Register(name string, f func(context.Context, *config.State, Command) error) {
 	c.handlers[name] = f
 }

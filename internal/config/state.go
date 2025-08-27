@@ -1,11 +1,10 @@
-package state
+package config
 
 import (
-	"gator/internal/config"
 	"gator/internal/database"
 )
 
 type State struct {
 	Db     *database.Queries
-	Config *config.Config
+	Config *Config
 }

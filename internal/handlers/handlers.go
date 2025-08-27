@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"gator/internal/commands"
+	"gator/internal/config"
 	"gator/internal/database"
-	"gator/internal/state"
+	"gator/internal/service"
 	"gator/internal/utils"
 	"log"
 	"time"
@@ -14,7 +15,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func HandleLogin(ctx context.Context, s *state.State, cmd commands.Command) error {
+func HandleLogin(ctx context.Context, s *config.State, cmd commands.Command) error {
 	args := cmd.Arguments
 	if len(args) == 0 || len(args) > 1 {
 		err := errors.New("invalid username")
@@ -46,7 +47,7 @@ func HandleLogin(ctx context.Context, s *state.State, cmd commands.Command) erro
 	return nil
 }
 
-func HandleRegistration(ctx context.Context, s *state.State, cmd commands.Command) error {
+func HandleRegistration(ctx context.Context, s *config.State, cmd commands.Command) error {
 	args := cmd.Arguments
 	if len(args) == 0 || len(args) > 1 {
 		err := errors.New("invalid username")
@@ -91,7 +92,7 @@ func HandleRegistration(ctx context.Context, s *state.State, cmd commands.Comman
 	return nil
 }
 
-func HandleDeletion(ctx context.Context, s *state.State, cmd commands.Command) error {
+func HandleDeletion(ctx context.Context, s *config.State, cmd commands.Command) error {
 	err := s.Db.DeleteUsers(ctx)
 	if err != nil {
 		log.Printf("HandleDeletion error: unable to delete users: %v\n", err)
@@ -100,7 +101,7 @@ func HandleDeletion(ctx context.Context, s *state.State, cmd commands.Command) e
 	return nil
 }
 
-func HandleListUsers(ctx context.Context, s *state.State, cmd commands.Command) error {
+func HandleListUsers(ctx context.Context, s *config.State, cmd commands.Command) error {
 	users, err := s.Db.GetUsers(ctx)
 	if err != nil {
 		log.Printf("HandleListUsers error: unable to list users: %v\n", err)
@@ -117,7 +118,7 @@ func HandleListUsers(ctx context.Context, s *state.State, cmd commands.Command) 
 	return nil
 }
 
-func HandleAggregation(ctx context.Context, s *state.State, cmd commands.Command) error {
+func HandleAggregation(ctx context.Context, s *config.State, cmd commands.Command) error {
 	args := cmd.Arguments
 	duration := args[0]
 	parsedDuration, err := time.ParseDuration(duration)
@@ -128,17 +129,17 @@ func HandleAggregation(ctx context.Context, s *state.State, cmd commands.Command
 
 	ticker := time.NewTicker(parsedDuration)
 	for ; ; <-ticker.C {
-		feeds, err := utils.ScrapeFeed(ctx, s)
+		feeds, err := service.ScrapeFeed(ctx, s)
 		if err != nil {
 			log.Printf("HandleAggregation error: unable to scrape feeds %v\n", err)
 			return err
 		}
-		fetchedFeed, err := commands.FetchFeed(ctx, feeds.Url)
+		fetchedFeed, err := service.FetchFeed(ctx, feeds.Url)
 		if err != nil {
 			log.Printf("HandleAggregation error: unable to fetch feeds %v\n", err)
 			return err
 		}
-		err = utils.CreatePost(s, fetchedFeed, ctx, feeds)
+		err = service.CreatePost(s, fetchedFeed, ctx, feeds)
 		if err != nil {
 			log.Printf("HandleAggregation error: unable to create post %v\n", err)
 			return err
@@ -146,7 +147,7 @@ func HandleAggregation(ctx context.Context, s *state.State, cmd commands.Command
 	}
 }
 
-func HandleAddFeed(ctx context.Context, s *state.State, cmd commands.Command, user database.User) error {
+func HandleAddFeed(ctx context.Context, s *config.State, cmd commands.Command, user database.User) error {
 	args := cmd.Arguments
 	feed, err := s.Db.CreateFeed(ctx, database.CreateFeedParams{
 		ID:        uuid.New(),
@@ -171,7 +172,7 @@ func HandleAddFeed(ctx context.Context, s *state.State, cmd commands.Command, us
 		return err
 	}
 
-	fetchFeed, err := commands.FetchFeed(ctx, feed.Url)
+	fetchFeed, err := service.FetchFeed(ctx, feed.Url)
 	if err != nil {
 		return err
 	}
@@ -181,7 +182,7 @@ func HandleAddFeed(ctx context.Context, s *state.State, cmd commands.Command, us
 
 }
 
-func HandleListFeeds(ctx context.Context, s *state.State, cmd commands.Command) error {
+func HandleListFeeds(ctx context.Context, s *config.State, cmd commands.Command) error {
 	feeds, err := s.Db.GetFeeds(ctx)
 	if err != nil {
 		return err
@@ -193,7 +194,7 @@ func HandleListFeeds(ctx context.Context, s *state.State, cmd commands.Command) 
 	return nil
 }
 
-func HandleFeedFollow(ctx context.Context, s *state.State, cmd commands.Command, user database.User) error {
+func HandleFeedFollow(ctx context.Context, s *config.State, cmd commands.Command, user database.User) error {
 	args := cmd.Arguments
 	feed, err := s.Db.GetFeedByUrl(ctx, args[0])
 	if err != nil {
@@ -213,7 +214,7 @@ func HandleFeedFollow(ctx context.Context, s *state.State, cmd commands.Command,
 	return nil
 }
 
-func HandleFeedFollowing(ctx context.Context, s *state.State, cmd commands.Command, user database.User) error {
+func HandleFeedFollowing(ctx context.Context, s *config.State, cmd commands.Command, user database.User) error {
 	feeds, err := s.Db.GetFeedFollowsForUser(ctx, user.ID)
 	if err != nil {
 		return err
@@ -224,7 +225,7 @@ func HandleFeedFollowing(ctx context.Context, s *state.State, cmd commands.Comma
 	return nil
 }
 
-func HandleUnfollow(ctx context.Context, s *state.State, cmd commands.Command, user database.User) error {
+func HandleUnfollow(ctx context.Context, s *config.State, cmd commands.Command, user database.User) error {
 	args := cmd.Arguments
 	feed, err := s.Db.GetFeedByUrl(ctx, args[0])
 	if err != nil {
