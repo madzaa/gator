@@ -74,7 +74,7 @@ func (q *Queries) GetUser(ctx context.Context, name string) (User, error) {
 }
 
 const getUsers = `-- name: GetUsers :many
-SELECT name
+SELECT name as name
 from users
 `
 

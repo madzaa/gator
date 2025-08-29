@@ -16,4 +16,5 @@ func RegisterCommands(c *commands.Commands) {
 	c.Register("follow", middleware.LoggedIn(HandleFeedFollow))
 	c.Register("following", middleware.LoggedIn(HandleFeedFollowing))
 	c.Register("unfollow", middleware.LoggedIn(HandleUnfollow))
+	c.Register("browse", middleware.LoggedIn(HandleBrowse))
 }

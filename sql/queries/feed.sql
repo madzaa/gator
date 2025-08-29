@@ -18,6 +18,6 @@ DELETE
 FROM feeds;
 
 -- name: GetFeeds :many
-SELECT f.name, u.name
+SELECT u.name as username, f.name as feedname
 from feeds f
          left join users u on f.user_id = u.id;

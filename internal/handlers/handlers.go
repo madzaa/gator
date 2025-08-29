@@ -10,6 +10,7 @@ import (
 	"gator/internal/service"
 	"gator/internal/utils"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -69,7 +70,6 @@ func HandleRegistration(ctx context.Context, s *config.State, c commands.Command
 		log.Printf("HandleRegistration error: %v\n", err)
 		return err
 	}
-
 	_, err = s.Db.CreateUser(ctx, database.CreateUserParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
@@ -188,10 +188,10 @@ func HandleListFeeds(ctx context.Context, s *config.State, c commands.Command) e
 		return err
 	}
 	for i, feed := range feeds {
-		if i == 0 || feed.Name_2.String != feeds[i-1].Name_2.String {
-			fmt.Printf("* user: %s\n", feed.Name_2.String)
+		if i == 0 || feed.Username.String != feeds[i-1].Username.String {
+			fmt.Printf("* user: %s\n", feed.Username.String)
 		}
-		fmt.Printf("  * feed: %s\n", feed.Name)
+		fmt.Printf("  * feed: %s\n", feed.Feedname)
 	}
 	return nil
 }
@@ -202,13 +202,18 @@ func HandleFeedFollow(ctx context.Context, s *config.State, c commands.Command, 
 	if err != nil {
 		return err
 	}
-	exists, err := utils.CheckExists(ctx, func(ctx context.Context) error {
-		_, err := s.Db.GetFeedFollowsForUser(ctx, user.ID)
-		return err
-	})
+
+	exists := false
+	feedFollows, err := s.Db.GetFeedFollowsForUser(ctx, user.ID)
 	if err != nil {
 		return err
 	}
+	for _, feedFollow := range feedFollows {
+		if feedFollow.Feedname.String == feed.Url {
+			exists = true
+		}
+	}
+
 	if !exists {
 		_, err = s.Db.CreateFeedFollows(ctx, database.CreateFeedFollowsParams{
 			ID:        uuid.New(),
@@ -220,7 +225,7 @@ func HandleFeedFollow(ctx context.Context, s *config.State, c commands.Command, 
 		if err != nil {
 			return err
 		}
-		fmt.Println(feed.Name, user.Name)
+		fmt.Printf("Created feed %s for user %s", feed.Name, user.Name)
 	} else {
 		fmt.Printf("Feed follow exists\n")
 	}
@@ -234,7 +239,7 @@ func HandleFeedFollowing(ctx context.Context, s *config.State, c commands.Comman
 		return err
 	}
 	for _, feed := range feeds {
-		fmt.Println(feed.Name_2.String)
+		fmt.Println(feed.Feedname.String)
 	}
 	return nil
 }
@@ -252,5 +257,30 @@ func HandleUnfollow(ctx context.Context, s *config.State, c commands.Command, us
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func HandleBrowse(ctx context.Context, s *config.State, c commands.Command, user database.User) error {
+	args := c.Arguments
+	limit := 1
+	var err error
+	if len(args) > 0 {
+		limit, err = strconv.Atoi(args[0])
+	}
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(user.ID, limit)
+	posts, err := s.Db.GetPostsForUser(ctx, database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit:  int32(limit),
+	})
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(posts)
 	return nil
 }

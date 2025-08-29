@@ -76,7 +76,7 @@ func (q *Queries) GetPost(ctx context.Context, url string) (Post, error) {
 const getPostsForUser = `-- name: GetPostsForUser :many
 SELECT posts.id, posts.created_at, posts.updated_at, title, url, description, published_at, posts.feed_id, feed_follows.id, feed_follows.created_at, feed_follows.updated_at, user_id, feed_follows.feed_id
 FROM posts
-         LEFT JOIN feed_follows ON public.feed_follows.feed_id = posts.feed_id
+         LEFT JOIN feed_follows ON feed_follows.feed_id = posts.feed_id
 WHERE user_id = $1
 ORDER BY published_at DESC
 LIMIT $2

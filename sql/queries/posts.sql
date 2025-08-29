@@ -13,7 +13,7 @@ RETURNING *;
 -- name: GetPostsForUser :many
 SELECT *
 FROM posts
-         LEFT JOIN feed_follows ON public.feed_follows.feed_id = posts.feed_id
+         LEFT JOIN feed_follows ON feed_follows.feed_id = posts.feed_id
 WHERE user_id = $1
 ORDER BY published_at DESC
 LIMIT $2;

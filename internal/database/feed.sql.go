@@ -87,14 +87,14 @@ func (q *Queries) GetFeedByUrl(ctx context.Context, url string) (Feed, error) {
 }
 
 const getFeeds = `-- name: GetFeeds :many
-SELECT f.name, u.name
+SELECT u.name as username, f.name as feedname
 from feeds f
          left join users u on f.user_id = u.id
 `
 
 type GetFeedsRow struct {
-	Name   string
-	Name_2 sql.NullString
+	Username sql.NullString
+	Feedname string
 }
 
 func (q *Queries) GetFeeds(ctx context.Context) ([]GetFeedsRow, error) {
@@ -106,7 +106,7 @@ func (q *Queries) GetFeeds(ctx context.Context) ([]GetFeedsRow, error) {
 	var items []GetFeedsRow
 	for rows.Next() {
 		var i GetFeedsRow
-		if err := rows.Scan(&i.Name, &i.Name_2); err != nil {
+		if err := rows.Scan(&i.Username, &i.Feedname); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

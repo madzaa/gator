@@ -16,5 +16,5 @@ DELETE
 FROM users;
 
 -- name: GetUsers :many
-SELECT name
+SELECT name as name
 from users;
