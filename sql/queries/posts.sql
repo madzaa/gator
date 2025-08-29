@@ -11,7 +11,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
 
 -- name: GetPostsForUser :many
-SELECT *
+SELECT posts.title as posts
 FROM posts
          LEFT JOIN feed_follows ON feed_follows.feed_id = posts.feed_id
 WHERE user_id = $1

@@ -44,7 +44,7 @@ func HandleLogin(ctx context.Context, s *config.State, c commands.Command) error
 		log.Printf("HandleLogin error: unable to set user %v: %v\n", username, err)
 		return fmt.Errorf("unable to set user %v: %v\n", username, err)
 	}
-	fmt.Printf("user has been set to %s\n", username)
+	log.Printf("user has been set to %s\n", username)
 	return nil
 }
 
@@ -81,7 +81,7 @@ func HandleRegistration(ctx context.Context, s *config.State, c commands.Command
 		return fmt.Errorf("unable to create user %v: %v\n", username, err)
 	}
 
-	fmt.Printf("user has been created %s\n", username)
+	log.Printf("user has been created %s\n", username)
 
 	err = s.Config.SetUser(username)
 
@@ -109,9 +109,9 @@ func HandleListUsers(ctx context.Context, s *config.State, c commands.Command) e
 	}
 	for _, user := range users {
 		if user == s.Config.CurrentUserName {
-			fmt.Printf("* %v (current)\n", user)
+			log.Printf("* %v (current)\n", user)
 		} else {
-			fmt.Printf("* %v\n", user)
+			log.Printf("* %v\n", user)
 		}
 
 	}
@@ -176,7 +176,7 @@ func HandleAddFeed(ctx context.Context, s *config.State, c commands.Command, use
 	if err != nil {
 		return err
 	}
-	fmt.Println(fetchFeed.Channel.Title)
+	log.Printf("added feed %s\n", fetchFeed.Channel.Title)
 
 	return nil
 
@@ -189,9 +189,9 @@ func HandleListFeeds(ctx context.Context, s *config.State, c commands.Command) e
 	}
 	for i, feed := range feeds {
 		if i == 0 || feed.Username.String != feeds[i-1].Username.String {
-			fmt.Printf("* user: %s\n", feed.Username.String)
+			log.Printf("* user: %s\n", feed.Username.String)
 		}
-		fmt.Printf("  * feed: %s\n", feed.Feedname)
+		log.Printf("  * feed: %s\n", feed.Feedname)
 	}
 	return nil
 }
@@ -203,17 +203,18 @@ func HandleFeedFollow(ctx context.Context, s *config.State, c commands.Command, 
 		return err
 	}
 
-	exists := false
 	feedFollows, err := s.Db.GetFeedFollowsForUser(ctx, user.ID)
 	if err != nil {
 		return err
 	}
+	exists := false
 	for _, feedFollow := range feedFollows {
-		if feedFollow.Feedname.String == feed.Url {
+		if feedFollow.Url.String == feed.Url {
+			log.Printf("feed %v exists for %v\n", feedFollow.Feedname.String, feedFollow.Username.String)
 			exists = true
+			break
 		}
 	}
-
 	if !exists {
 		_, err = s.Db.CreateFeedFollows(ctx, database.CreateFeedFollowsParams{
 			ID:        uuid.New(),
@@ -225,11 +226,8 @@ func HandleFeedFollow(ctx context.Context, s *config.State, c commands.Command, 
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Created feed %s for user %s", feed.Name, user.Name)
-	} else {
-		fmt.Printf("Feed follow exists\n")
+		log.Printf("created feed %s for user %s\n", feed.Name, user.Name)
 	}
-
 	return nil
 }
 
@@ -239,7 +237,7 @@ func HandleFeedFollowing(ctx context.Context, s *config.State, c commands.Comman
 		return err
 	}
 	for _, feed := range feeds {
-		fmt.Println(feed.Feedname.String)
+		log.Println(feed.Feedname.String)
 	}
 	return nil
 }
@@ -267,20 +265,21 @@ func HandleBrowse(ctx context.Context, s *config.State, c commands.Command, user
 	if len(args) > 0 {
 		limit, err = strconv.Atoi(args[0])
 	}
-
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(user.ID, limit)
 	posts, err := s.Db.GetPostsForUser(ctx, database.GetPostsForUserParams{
 		UserID: user.ID,
 		Limit:  int32(limit),
 	})
+	log.Printf("posts for: %s", user.Name)
+	for _, post := range posts {
+		log.Println(post)
+	}
+
 	if err != nil {
 		return err
 	}
-
-	fmt.Println(posts)
 	return nil
 }

@@ -13,7 +13,7 @@ FROM inserted_feed_follow
 
 
 -- name: GetFeedFollowsForUser :many
-SELECT users.name as username, feeds.name as feedname
+SELECT users.name as username, feeds.name as feedname, feeds.url as url
 FROM feed_follows
          LEFT JOIN users ON users.id = feed_follows.user_id
          LEFT JOIN feeds ON feeds.id = feed_follows.feed_id
