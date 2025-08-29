@@ -6,6 +6,7 @@ import (
 	"gator/internal/config"
 	"gator/internal/database"
 	"gator/internal/utils"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,6 +25,7 @@ func CreatePost(s *config.State, fetchedFeed *config.RSSFeed, ctx context.Contex
 		if err != nil {
 			return err
 		}
+		log.Printf("Creating post %s", feed.Title)
 
 		err = s.Db.CreatePost(ctx, database.CreatePostParams{
 			ID:        uuid.New(),

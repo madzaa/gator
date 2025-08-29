@@ -15,8 +15,8 @@ import (
 	"github.com/google/uuid"
 )
 
-func HandleLogin(ctx context.Context, s *config.State, cmd commands.Command) error {
-	args := cmd.Arguments
+func HandleLogin(ctx context.Context, s *config.State, c commands.Command) error {
+	args := c.Arguments
 	if len(args) == 0 || len(args) > 1 {
 		err := errors.New("invalid username")
 		log.Printf("HandleLogin error: %v\n", err)
@@ -47,8 +47,8 @@ func HandleLogin(ctx context.Context, s *config.State, cmd commands.Command) err
 	return nil
 }
 
-func HandleRegistration(ctx context.Context, s *config.State, cmd commands.Command) error {
-	args := cmd.Arguments
+func HandleRegistration(ctx context.Context, s *config.State, c commands.Command) error {
+	args := c.Arguments
 	if len(args) == 0 || len(args) > 1 {
 		err := errors.New("invalid username")
 		log.Printf("HandleRegistration error: %v\n", err)
@@ -92,7 +92,7 @@ func HandleRegistration(ctx context.Context, s *config.State, cmd commands.Comma
 	return nil
 }
 
-func HandleDeletion(ctx context.Context, s *config.State, cmd commands.Command) error {
+func HandleDeletion(ctx context.Context, s *config.State, c commands.Command) error {
 	err := s.Db.DeleteUsers(ctx)
 	if err != nil {
 		log.Printf("HandleDeletion error: unable to delete users: %v\n", err)
@@ -101,7 +101,7 @@ func HandleDeletion(ctx context.Context, s *config.State, cmd commands.Command) 
 	return nil
 }
 
-func HandleListUsers(ctx context.Context, s *config.State, cmd commands.Command) error {
+func HandleListUsers(ctx context.Context, s *config.State, c commands.Command) error {
 	users, err := s.Db.GetUsers(ctx)
 	if err != nil {
 		log.Printf("HandleListUsers error: unable to list users: %v\n", err)
@@ -118,8 +118,8 @@ func HandleListUsers(ctx context.Context, s *config.State, cmd commands.Command)
 	return nil
 }
 
-func HandleAggregation(ctx context.Context, s *config.State, cmd commands.Command) error {
-	args := cmd.Arguments
+func HandleAggregation(ctx context.Context, s *config.State, c commands.Command) error {
+	args := c.Arguments
 	duration := args[0]
 	parsedDuration, err := time.ParseDuration(duration)
 	if err != nil {
@@ -147,8 +147,8 @@ func HandleAggregation(ctx context.Context, s *config.State, cmd commands.Comman
 	}
 }
 
-func HandleAddFeed(ctx context.Context, s *config.State, cmd commands.Command, user database.User) error {
-	args := cmd.Arguments
+func HandleAddFeed(ctx context.Context, s *config.State, c commands.Command, user database.User) error {
+	args := c.Arguments
 	feed, err := s.Db.CreateFeed(ctx, database.CreateFeedParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
@@ -176,45 +176,59 @@ func HandleAddFeed(ctx context.Context, s *config.State, cmd commands.Command, u
 	if err != nil {
 		return err
 	}
-	fmt.Println(fetchFeed)
+	fmt.Println(fetchFeed.Channel.Title)
 
 	return nil
 
 }
 
-func HandleListFeeds(ctx context.Context, s *config.State, cmd commands.Command) error {
+func HandleListFeeds(ctx context.Context, s *config.State, c commands.Command) error {
 	feeds, err := s.Db.GetFeeds(ctx)
 	if err != nil {
 		return err
 	}
-	for _, feed := range feeds {
-		fmt.Printf("%s\n%s\n", feed.Name, feed.Name_2.String)
+	for i, feed := range feeds {
+		if i == 0 || feed.Name_2.String != feeds[i-1].Name_2.String {
+			fmt.Printf("* user: %s\n", feed.Name_2.String)
+		}
+		fmt.Printf("  * feed: %s\n", feed.Name)
 	}
-
 	return nil
 }
 
-func HandleFeedFollow(ctx context.Context, s *config.State, cmd commands.Command, user database.User) error {
-	args := cmd.Arguments
+func HandleFeedFollow(ctx context.Context, s *config.State, c commands.Command, user database.User) error {
+	args := c.Arguments
 	feed, err := s.Db.GetFeedByUrl(ctx, args[0])
 	if err != nil {
 		return err
 	}
-	_, err = s.Db.CreateFeedFollows(ctx, database.CreateFeedFollowsParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		UserID:    user.ID,
-		FeedID:    feed.ID,
+	exists, err := utils.CheckExists(ctx, func(ctx context.Context) error {
+		_, err := s.Db.GetFeedFollowsForUser(ctx, user.ID)
+		return err
 	})
 	if err != nil {
 		return err
 	}
-	fmt.Println(feed.Name, user.Name)
+	if !exists {
+		_, err = s.Db.CreateFeedFollows(ctx, database.CreateFeedFollowsParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			UserID:    user.ID,
+			FeedID:    feed.ID,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(feed.Name, user.Name)
+	} else {
+		fmt.Printf("Feed follow exists\n")
+	}
+
 	return nil
 }
 
-func HandleFeedFollowing(ctx context.Context, s *config.State, cmd commands.Command, user database.User) error {
+func HandleFeedFollowing(ctx context.Context, s *config.State, c commands.Command, user database.User) error {
 	feeds, err := s.Db.GetFeedFollowsForUser(ctx, user.ID)
 	if err != nil {
 		return err
@@ -225,8 +239,8 @@ func HandleFeedFollowing(ctx context.Context, s *config.State, cmd commands.Comm
 	return nil
 }
 
-func HandleUnfollow(ctx context.Context, s *config.State, cmd commands.Command, user database.User) error {
-	args := cmd.Arguments
+func HandleUnfollow(ctx context.Context, s *config.State, c commands.Command, user database.User) error {
+	args := c.Arguments
 	feed, err := s.Db.GetFeedByUrl(ctx, args[0])
 	if err != nil {
 		return err

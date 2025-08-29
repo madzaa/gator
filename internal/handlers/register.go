@@ -5,15 +5,15 @@ import (
 	"gator/internal/middleware"
 )
 
-func RegisterCommands(cmds *commands.Commands) {
-	cmds.Register("login", HandleLogin)
-	cmds.Register("register", HandleRegistration)
-	cmds.Register("reset", HandleDeletion)
-	cmds.Register("users", HandleListUsers)
-	cmds.Register("agg", HandleAggregation)
-	cmds.Register("addfeed", middleware.LoggedIn(HandleAddFeed))
-	cmds.Register("feeds", HandleListFeeds)
-	cmds.Register("follow", middleware.LoggedIn(HandleFeedFollow))
-	cmds.Register("following", middleware.LoggedIn(HandleFeedFollowing))
-	cmds.Register("unfollow", middleware.LoggedIn(HandleUnfollow))
+func RegisterCommands(c *commands.Commands) {
+	c.Register("login", HandleLogin)
+	c.Register("register", HandleRegistration)
+	c.Register("reset", HandleDeletion)
+	c.Register("users", HandleListUsers)
+	c.Register("agg", HandleAggregation)
+	c.Register("addfeed", middleware.LoggedIn(HandleAddFeed))
+	c.Register("feeds", HandleListFeeds)
+	c.Register("follow", middleware.LoggedIn(HandleFeedFollow))
+	c.Register("following", middleware.LoggedIn(HandleFeedFollowing))
+	c.Register("unfollow", middleware.LoggedIn(HandleUnfollow))
 }
